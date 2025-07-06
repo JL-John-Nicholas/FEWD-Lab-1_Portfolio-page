@@ -1032,6 +1032,1156 @@ You have successfully:
 
 ---
 
+### Experiment 6:
+1. Create a React Project.
+React Project Contains:  
+Text Box: You need to Enter Username
+Button:  While clicking this button, you need to display message as 
+      Output: “Hi ‘Name!!!’ Welcome to S3 Bucket Lab External”
+
+2. Clone in AWS with git or manual method
+3. Write & Build Docker Image in AWS
+4. Get the public url for project
+Note: EC2, Docker Build should contain your Roll No.
+
+Steps in detail:
+
+### Step 1: Create a React App
+
+```bash
+npx create-react-app rollnumber-app
+```
+
+✅ Sets up React development environment with `package.json`, `node_modules`, `src/`.
+
+---
+
+### Step 2: Move into Project Directory
+
+```bash
+cd rollnumber-app
+```
+
+✅ All project work will be done inside this directory.
+
+---
+
+### Step 3: Create Welcome Component
+
+Inside `src/`, create `welcome.js` file with:
+
+```javascript
+import React, { useState } from 'react';
+
+const WelcomeMessage = () => {
+  const [name, setName] = useState('John');
+  const [showMessage, setShowMessage] = useState(false);
+
+  const handleButtonClick = () => {
+    setShowMessage(true);
+  };
+
+  return (
+    <div style={{ textAlign: "center", marginTop: "20px" }}>
+      <input
+        type="text"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        placeholder="Enter your name"
+      />
+      <button onClick={handleButtonClick}>Show Welcome Message</button>
+      {showMessage && <p>Hi "{name}!!!" Welcome to S3 bucket</p>}
+    </div>
+  );
+};
+
+export default WelcomeMessage;
+```
+
+---
+
+### Step 4: Edit `App.js`
+
+Import and use your component:
+
+```javascript
+import React from 'react';
+import WelcomeMessage from './welcome';
+
+function App() {
+  return (
+    <div className="App">
+      <WelcomeMessage />
+    </div>
+  );
+}
+
+export default App;
+```
+
+---
+
+### Step 5: Test Locally
+
+```bash
+npm start
+```
+
+✅ Opens on `http://localhost:3000`.
+
+---
+
+## 🐳 Part 2: Dockerize React App
+
+---
+
+### Step 6: Create Dockerfile
+
+Create `Dockerfile` in the root folder:
+
+```dockerfile
+FROM node:16.17-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN npm install
+COPY . .
+RUN npm run build
+RUN npm install -g serve
+EXPOSE 3000
+CMD ["serve", "-s", "build", "-l", "3000"]
+```
+
+✅ Uses `serve` to run the built static app on port `3000`.
+
+---
+
+### Step 7: Create `.dockerignore`
+
+```bash
+nano .dockerignore
+```
+
+Add:
+
+```
+node_modules
+.dockerignore
+Dockerfile
+```
+
+✅ Keeps image smaller by ignoring local modules.
+
+---
+
+## 🗂 Part 3: Push to GitHub
+
+---
+
+### Step 8: Initialize Git Repo
+
+```bash
+git init
+git add .
+git commit -m "first commit"
+```
+
+---
+
+### Step 9: Push to GitHub
+
+```bash
+git remote add origin https://github.com/<username>/<repo>.git
+git branch -M main
+git push -u origin main
+```
+
+✅ Your code is now on GitHub for later cloning.
+
+---
+
+## ☁ Part 4: Setup AWS EC2
+
+---
+
+### Step 10: Launch EC2
+
+* **AMI:** Ubuntu Server (or Amazon Linux 2).
+* **Instance type:** t2.micro
+* **Ports:**
+
+  * 22 (SSH)
+  * 3000 (React app)
+
+---
+
+### Step 11: Connect via SSH
+
+```bash
+ssh -i "your-key.pem" ubuntu@<ec2-public-ip>
+```
+
+✅ Now inside your EC2 server.
+
+---
+
+## 🐳 Part 5: Install Docker on Ubuntu EC2
+
+---
+
+### Step 12: Install Docker
+
+```bash
+sudo apt update
+sudo apt install docker.io -y
+sudo systemctl start docker
+sudo systemctl enable docker
+sudo usermod -aG docker ubuntu
+```
+
+✅ Adds your user to `docker` group.
+
+---
+
+### Step 13: Refresh Docker Group
+
+Run either:
+
+```bash
+newgrp docker
+```
+
+or log out & log in again to apply the group.
+
+---
+
+### Step 14: Verify Docker
+
+```bash
+docker --version
+```
+
+✅ Shows Docker is installed.
+
+---
+
+## 📝 Part 6: Pull Code from GitHub on EC2
+
+---
+
+### Step 15: Install Git
+
+```bash
+sudo apt install git -y
+```
+
+---
+
+### Step 16: Clone Repo
+
+```bash
+git clone https://github.com/<username>/<repo>.git
+cd rollnumber-app
+```
+
+✅ Your project files are now on EC2.
+
+---
+
+## 🐳 Part 7: Build & Run Docker Container
+
+---
+
+### Step 17: Build Docker Image
+
+```bash
+docker build -t rollno-react-app .
+```
+
+✅ Builds image using `Dockerfile`.
+
+---
+
+### Step 18: Run Docker Container
+
+```bash
+docker run -p 3000:3000 rollno-react-app
+```
+
+✅ Runs your app on EC2 port `3000`.
+
+---
+
+## 🌐 Part 8: Access in Browser
+
+---
+
+### Step 19: Test From Browser
+
+Open on your laptop:
+
+```
+http://<ec2-public-ip>:3000
+```
+
+✅ Your custom React app is now live from EC2 via Docker.
+
+---
+
+### Experiment 7
+Create a VPC Network & perform the following scenario
+1. Create two Subnets namely Public_Rollno & Private_Rollno
+2. Create Internet Gateways for step1
+3. Create Routing Tables to access the network 
+4. Create two Instance namely Public_Rollno & Private_Rollno
+I.  Private Instance: Create a confidential data
+II. Public Instance: Write a Business logic for java code to generate random numbers  
+5. You need to Access Private network using Bastion Network
+Finally Upload your Document with Screenshots & steps with Explanation
+
+Steps in detail:
+
+## Part 1: Create a VPC
+
+---
+
+### Step 1: Open AWS VPC
+
+* Start AWS Lab.
+* Go to AWS Management Console.
+* In the search bar, type **VPC** and select it.
+
+---
+
+### Step 2: Navigate to VPC Dashboard
+
+* Click **VPC**.
+* You will see the **VPC Dashboard**.
+
+---
+
+### Step 3: Create a New VPC
+
+* Click **Create VPC**.
+* Configure:
+
+  * **Resources to create:** Select.
+  * **Name tag:** `Rollno-VPC`
+  * **IPv4 CIDR:** `12.0.0.0/16`
+  * **IPv6:** No IPv6
+  * **Tenancy:** Default
+* Tags:
+
+  * Key: Your Name
+  * Value: `Rollno-VPC`
+* Click **Create VPC**.
+
+✅ VPC created successfully.
+
+---
+
+## Part 2: Create an Internet Gateway (IGW)
+
+---
+
+### Step 4: Create and Attach IGW
+
+* Go to **Internet Gateways** → Click **Create Internet Gateway**.
+* Name: `Rollno-IG`.
+* Click **Create Internet Gateway**.
+
+✅ Now attach it:
+
+* Select the IGW.
+* Click **Actions → Attach to VPC**.
+* Select `Rollno-VPC` → Click **Attach**.
+
+---
+
+## Part 3: Create Subnets
+
+---
+
+### Step 5: Create Subnets
+
+* Go to **Subnets → Create Subnet**.
+* Select your VPC: `Rollno-VPC`.
+
+#### Create Public Subnet
+
+* **Subnet name:** `Rollno-public-SB1`
+* **AZ:** `us-east-1a`
+* **CIDR:** `12.0.0.0/20`
+
+#### Create Private Subnet
+
+* Click **Add New Subnet**.
+* **Subnet name:** `Rollno-private-SB2`
+* **AZ:** `us-east-1a`
+* **CIDR:** `12.0.16.0/20`
+
+✅ Click **Create Subnet**.
+
+---
+
+## Part 4: Setup Route Tables
+
+---
+
+### Step 6: Create Public Route Table
+
+* Go to **Route Tables → Create Route Table**.
+* Name: `Rollno-Public-RT`
+* VPC: `Rollno-VPC`
+* Click **Create**.
+
+---
+
+### Provide Internet Access
+
+1. Select `Rollno-Public-RT` → Go to **Routes → Edit Routes**.
+2. Click **Add Route**:
+
+   * **Destination:** `0.0.0.0/0`
+   * **Target:** Select your **Internet Gateway**.
+3. Click **Save Changes**.
+
+---
+
+### Associate Public Subnet
+
+* Go to **Subnet Associations → Edit Subnet Associations**.
+* Select `Rollno-public-SB1`.
+* Click **Save**.
+
+---
+
+### Step 7: Create Private Route Table
+
+* Click **Create Route Table**.
+* Name: `Rollno-private-RT`.
+* VPC: `Rollno-VPC`.
+* Click **Create**.
+
+---
+
+### Associate Private Subnet
+
+* Select `Rollno-private-RT`.
+* Go to **Subnet Associations → Edit Subnet Associations**.
+* Select `Rollno-private-SB2`.
+* Click **Save**.
+
+---
+
+## Part 5: Launch EC2 in Public Subnet
+
+---
+
+### Step 8: Create EC2 Instance
+
+* Go to **EC2 → Instances → Launch Instance**.
+* Name: `EC1_Rollno_Public_subnet-Instance`
+* **AMI:** Ubuntu
+* **Key Pair:** (your PEM file)
+
+#### Network Settings:
+
+* **VPC:** `Rollno-VPC`
+* **Subnet:** `Rollno-public-SB1`
+* **Auto-assign Public IP:** Enabled.
+
+#### Security Group:
+
+* Name: `Public-Rollno-ec2-SG`
+* Allow:
+
+  * **SSH:** TCP, Port 22, Source `0.0.0.0/0`.
+
+✅ Click **Launch Instance**.
+
+---
+
+### Step 9: SSH into Public Instance (Bastion Host)
+
+* Copy the **public IPv4** of the instance.
+
+```bash
+ssh -i "your-key.pem" ubuntu@<public-ip>
+```
+
+✅ You are now inside your **bastion host**.
+
+---
+
+### Test Network
+
+* Check private IP:
+
+```bash
+hostname -I
+```
+
+* Check public IP via Internet:
+
+```bash
+curl ifconfig.me
+```
+
+✅ Confirms IGW + route table working.
+
+---
+
+## Part 6: Launch EC2 in Private Subnet
+
+---
+
+### Step 10: Create EC2 in Private Subnet
+
+* Go to **EC2 → Launch Instance**.
+* Name: `EC2_Rollno_Private_subnet-Instance`.
+
+#### Network Settings:
+
+* **VPC:** `Rollno-VPC`
+* **Subnet:** `Rollno-private-SB2`
+* **Auto-assign Public IP:** Disabled.
+
+#### Security Group:
+
+* Name: `Private-Rollno-ec2-SG`
+* Allow:
+
+  * **SSH:** TCP, Port 22.
+  * **Source:** Custom → Select **security group ID** of bastion EC2 (`Public-Rollno-ec2-SG`).
+
+✅ Click **Launch Instance**.
+
+---
+
+## Part 7: Connect to Private EC2 via Bastion Host
+
+---
+
+### Step 11: SSH Jump from Public to Private
+
+1. Already SSH’ed into **bastion host**.
+2. Create PEM file inside bastion:
+
+```bash
+nano aws_privatekey_ec2.pem
+```
+
+* Paste contents of your local PEM.
+* Save & exit.
+
+3. Set permission:
+
+```bash
+chmod 400 aws_privatekey_ec2.pem
+```
+
+4. Connect to private EC2:
+
+```bash
+ssh -i aws_privatekey_ec2.pem ubuntu@<private-ip-of-private-EC2>
+```
+
+✅ You are now inside your **private subnet EC2 via bastion**.
+
+---
+
+### Experiment 8
+SNS & SQS Application:
+Create a Canteen Application which  contains following steps :
+Owner: Accept the order, Give a Preparation waiting Time, Inform after handover to Delivery Boy via Email notification
+Customer: Place the Order, Get Notifications from Owner via Email(order accepted, Food processing time, food ready alert, delivery boy handover)
+Delivery Boy: Take the order and give notification to customer for picking parcel, after reaching destination give a  arrived notification & Finally send SMS for Feedback/Rating.
+NOTE: Use SNS, SQS Service, the data to store in DynamoDB.
+
+Steps in detail:
+
+Absolutely. Here’s **Experiment 11** rewritten exactly like your previous experiments —
+step-by-step, clean, without emojis, following the same structured style you used for your EC2 / Docker / VPC notes.
+
+---
+
+# Experiment 11
+
+**Implement a Canteen Management System using AWS SQS**
+
+---
+
+## Part 1: Create DynamoDB Tables
+
+---
+
+### Step 1: Create Orders Table
+
+* Go to AWS Console → DynamoDB → Create Table
+* Table Name: `Orders`
+* Partition Key: `orderId` (String)
+* Click Create
+* After creation, add attributes:
+
+  * `customerEmail` (String)
+  * `status` (String)
+  * `prepTime` (Number)
+  * `deliveryBoyId` (String)
+
+---
+
+### Step 2: Create DeliveryStatus Table
+
+* Table Name: `DeliveryStatus`
+* Partition Key: `deliveryId` (String)
+* Add attributes:
+
+  * `orderId` (String)
+  * `status` (String)
+
+---
+
+### Step 3: Create Users Table
+
+* Table Name: `Users`
+* Partition Key: `userId` (String)
+* Add attributes:
+
+  * `role` (String)
+  * `email` (String)
+  * `phone` (String)
+
+---
+
+## Part 2: Create SNS Topics
+
+---
+
+### Step 4: Create OrderStatusTopic
+
+* Go to SNS → Create Topic
+* Type: Standard
+* Name: `OrderStatusTopic`
+* Create subscriptions (Email) for customers.
+
+---
+
+### Step 5: Create DeliveryNotificationsTopic
+
+* Name: `DeliveryNotificationsTopic`
+* Add subscribers:
+
+  * Email for delivery updates
+  * SMS for quick notifications
+
+---
+
+### Step 6: Create FeedbackTopic
+
+* Name: `FeedbackTopic`
+* Add subscribers:
+
+  * SMS for sending feedback requests
+
+---
+
+## Part 3: Create SQS Queues
+
+---
+
+### Step 7: Create OwnerQueue
+
+* Go to SQS → Create Queue
+* Name: `OwnerQueue`
+* Type: Standard
+* Used to notify owner when new order is placed.
+
+---
+
+### Step 8: Create DeliveryBoyQueue
+
+* Name: `DeliveryBoyQueue`
+* Type: Standard
+* Used to notify delivery boy when food is ready.
+
+---
+
+## Part 4: Create Lambda Functions
+
+---
+
+### Step 9: Create placeOrderLambda
+
+* Go to: AWS Console → Lambda → Create function
+* Name: `placeOrderLambda`
+* Runtime: Python 3.9
+* Execution role: Attach `LambdaCanteenExecutionRole` (with DynamoDB, SQS, SNS permissions)
+* Add Trigger: API Gateway (HTTP API → POST `/placeOrder`)
+
+**Logic:**
+
+* Generates a unique `orderId`
+* Saves new order into `Orders` table with status `Placed`
+* Sends message to `OwnerQueue` to notify the owner
+
+**Code:**
+
+```python
+import boto3, json, uuid
+
+def lambda_handler(event, context):
+    orderId = str(uuid.uuid4())
+    body = json.loads(event['body'])
+    customerEmail = body['email']
+
+    dynamo = boto3.resource('dynamodb')
+    table = dynamo.Table('Orders')
+    table.put_item(Item={
+        'orderId': orderId,
+        'customerEmail': customerEmail,
+        'status': 'Placed'
+    })
+
+    sqs = boto3.client('sqs')
+    sqs.send_message(
+        QueueUrl='https://sqs.us-east-1.amazonaws.com/443369304872/OwnerQueue',
+        MessageBody=json.dumps({'orderId': orderId})
+    )
+
+    return {'statusCode': 200, 'body': 'Order Placed'}
+```
+
+---
+
+### Step 10: Create processOwnerQueueLambda
+
+* Go to: AWS Console → Lambda → Create function
+* Name: `processOwnerQueueLambda`
+* Runtime: Python 3.9
+* Execution role: Attach `LambdaCanteenExecutionRole`
+* Add Trigger: SQS (OwnerQueue)
+
+**Logic:**
+
+* Reads new order from `OwnerQueue`
+* Updates `Orders` table status to `Accepted` and sets `prepTime`
+* Sends email to customer via `OrderStatusTopic`
+
+**Code:**
+
+```python
+import boto3, json
+
+def lambda_handler(event, context):
+    dynamo = boto3.resource('dynamodb')
+    table = dynamo.Table('Orders')
+    sns = boto3.client('sns')
+
+    for record in event['Records']:
+        msg = json.loads(record['body'])
+        orderId = msg['orderId']
+        prepTime = 15
+
+        table.update_item(
+            Key={'orderId': orderId},
+            UpdateExpression='SET #s = :s, prepTime = :p',
+            ExpressionAttributeNames={'#s': 'status'},
+            ExpressionAttributeValues={':s': 'Accepted', ':p': prepTime}
+        )
+
+        order = table.get_item(Key={'orderId': orderId})['Item']
+        sns.publish(
+            TopicArn='arn:aws:sns:us-east-1:443369304872:OrderStatusTopic',
+            Message=f"Order accepted! Ready in {prepTime} minutes.",
+            Subject="Order Accepted"
+        )
+```
+
+---
+
+### Step 11: Create foodReadyLambda
+
+* Go to: AWS Console → Lambda → Create function
+* Name: `foodReadyLambda`
+* Runtime: Python 3.9
+* Execution role: Attach `LambdaCanteenExecutionRole`
+* Add Trigger: API Gateway (POST `/markReady`)
+
+**Logic:**
+
+* Updates order status to `Ready` in `Orders` table
+* Sends email notification to customer
+* Sends message to `DeliveryBoyQueue` to notify delivery boy
+
+**Code:**
+
+```python
+import boto3
+import json
+
+def lambda_handler(event, context):
+    try:
+        body = json.loads(event['body'])
+        orderId = body['orderId']
+
+        dynamo = boto3.resource('dynamodb')
+        table = dynamo.Table('Orders')
+        table.update_item(
+            Key={'orderId': orderId},
+            UpdateExpression='SET #s = :s',
+            ExpressionAttributeNames={'#s': 'status'},
+            ExpressionAttributeValues={':s': 'Ready'}
+        )
+
+        sns = boto3.client('sns')
+        sns.publish(
+            TopicArn='arn:aws:sns:us-east-1:443369304872:OrderStatusTopic',
+            Message="Your order is ready! Being handed to delivery boy.",
+            Subject="Food Ready"
+        )
+
+        sqs = boto3.client('sqs')
+        sqs.send_message(
+            QueueUrl='https://sqs.us-east-1.amazonaws.com/443369304872/DeliveryBoyQueue',
+            MessageBody=json.dumps({'orderId': orderId})
+        )
+
+        return {
+            'statusCode': 200,
+            'body': json.dumps('Marked as Ready')
+        }
+
+    except Exception as e:
+        print("Error:", str(e))
+        return {
+            'statusCode': 500,
+            'body': json.dumps(f"Internal Server Error: {str(e)}")
+        }
+```
+
+---
+
+### Step 12: Create processDeliveryQueueLambda
+
+* Go to: AWS Console → Lambda → Create function
+* Name: `processDeliveryQueueLambda`
+* Runtime: Python 3.9
+* Execution role: Attach `LambdaCanteenExecutionRole`
+* Add Trigger: SQS (DeliveryBoyQueue)
+
+**Logic:**
+
+* Assigns `deliveryBoyId` to the order
+* Notifies customer by publishing to `DeliveryNotificationsTopic` (Email + SMS)
+
+**Code:**
+
+```python
+def lambda_handler(event, context):
+    import boto3, json
+    dynamo = boto3.resource('dynamodb')
+    table = dynamo.Table('Orders')
+    sns = boto3.client('sns')
+
+    for record in event['Records']:
+        msg = json.loads(record['body'])
+        orderId = msg['orderId']
+        deliveryBoyId = 'DELIVERY-123'  # Simulated assignment
+
+        table.update_item(
+            Key={'orderId': orderId},
+            UpdateExpression='SET deliveryBoyId = :d',
+            ExpressionAttributeValues={':d': deliveryBoyId}
+        )
+
+        sns.publish(
+            TopicArn='arn:aws:sns:us-east-1:443369304872:DeliveryNotificationsTopic',
+            Message=f"Delivery boy assigned and en route for order {orderId}",
+            Subject="Delivery Started"
+        )
+```
+
+---
+
+### Step 13: Create deliveryBoyUpdatesLambda
+
+* Go to: AWS Console → Lambda → Create function
+* Name: `deliveryBoyUpdatesLambda`
+* Runtime: Python 3.9
+* Execution role: Attach `LambdaCanteenExecutionRole`
+* Add Trigger: API Gateway (POST `/deliveryUpdate`)
+
+**Logic:**
+
+* Receives `orderId` from Delivery Boy’s app / frontend.
+* Sends email + SMS to customer that delivery boy has arrived via `DeliveryNotificationsTopic`.
+* Sends feedback SMS via `FeedbackTopic`.
+
+---
+
+**Code:**
+
+```python
+import boto3
+import json
+
+def lambda_handler(event, context):
+    try:
+        body = json.loads(event['body'])
+        orderId = body['orderId']
+
+        sns = boto3.client('sns')
+
+        # Notify customer that delivery boy has arrived
+        sns.publish(
+            TopicArn='arn:aws:sns:us-east-1:443369304872:DeliveryNotificationsTopic',
+            Message=f"Delivery boy has reached your location for order {orderId}.",
+            Subject="Order Arrived"
+        )
+
+        # Send feedback request
+        sns.publish(
+            TopicArn='arn:aws:sns:us-east-1:443369304872:FeedbackTopic',
+            Message="Thank you for ordering! Please share your feedback."
+        )
+
+        return {
+            'statusCode': 200,
+            'body': json.dumps('Customer notified')
+        }
+
+    except Exception as e:
+        print("Error:", str(e))
+        return {
+            'statusCode': 500,
+            'body': json.dumps(f"Internal Server Error: {str(e)}")
+        }
+```
+
+---
+
+## Part 5: Attach IAM Roles to Lambda Functions
+
+---
+
+### Step 14: Create IAM Role
+
+* Go to IAM → Roles → Create Role
+* Trusted entity: Lambda
+* Attach policies:
+
+  * `AmazonDynamoDBFullAccess`
+  * `AmazonSQSFullAccess`
+  * `AmazonSNSFullAccess`
+  * `CloudWatchLogsFullAccess` (optional for logs)
+* Name: `LambdaCanteenExecutionRole`
+
+---
+
+### Step 15: Attach Role to Each Lambda
+
+* Go to Lambda → Select function → Configuration → Permissions
+* Attach `LambdaCanteenExecutionRole` to each function.
+
+---
+
+Absolutely. Here are your steps **in a detailed, step-by-step style**, like your earlier experiments.
+
+---
+
+# Part 6: Setup API Gateway
+
+---
+
+## Step 16: Create API Gateway & Integrate with Lambda
+
+1. **Go to AWS Console → API Gateway**
+
+2. **Create API**
+
+   * Choose `HTTP API` (simpler and faster) or `REST API` (for advanced features).
+   * For this example, `HTTP API` is recommended.
+
+3. **Configure API**
+
+   * Give it a name: `CanteenAPI`
+   * Click `Next`.
+
+4. **Add routes**
+
+   | HTTP Method | Resource path   | Integration target       |
+   | ----------- | --------------- | ------------------------ |
+   | POST        | /placeOrder     | placeOrderLambda         |
+   | POST        | /markReady      | foodReadyLambda          |
+   | POST        | /deliveryUpdate | deliveryBoyUpdatesLambda |
+
+   **To add:**
+
+   * Click `Add Integration`.
+   * Choose `Lambda`.
+   * Select your Lambda function.
+   * For each route, click `Attach integration`.
+
+5. **Enable CORS**
+
+   * In `Routes` page, select each route.
+   * Click `CORS` → Enable default settings (allow all origins).
+
+6. **Deploy API**
+
+   * Click `Deployments` in left menu.
+   * Click `Create`.
+   * Stage name: `prod`.
+   * Click `Deploy`.
+
+7. **Copy your Invoke URL**
+
+   * It will look like:
+
+     ```
+     https://j8yd5bn3d8.execute-api.us-east-1.amazonaws.com/prod
+     ```
+
+✅ Now your API Gateway is live and connected to your Lambda functions.
+
+---
+
+# Part 7: Testing the System
+
+---
+
+## Step 17: Test /placeOrder Endpoint
+
+* **URL:**
+
+  ```
+  POST https://<api-id>.execute-api.<region>.amazonaws.com/prod/placeOrder
+  ```
+
+* **Body:**
+
+  ```json
+  {
+    "email": "customer@example.com"
+  }
+  ```
+
+* **Expected:**
+
+  * HTTP `200 OK` with response `"Order Placed"`
+  * New item created in `Orders` DynamoDB table with:
+
+    * `status = Placed`
+    * `customerEmail`
+    * unique `orderId`
+  * SQS message sent to `OwnerQueue`.
+
+✅ Use `Postman` or `curl` to test:
+
+```bash
+curl -X POST \
+  -H "Content-Type: application/json" \
+  -d '{"email": "customer@example.com"}' \
+  https://<api-id>.execute-api.<region>.amazonaws.com/prod/placeOrder
+```
+
+---
+
+## Step 18: Test /markReady Endpoint
+
+Go to AWS Console → Lambda → Select your foodReadyLambda
+
+Click Configuration → General configuration → Edit
+
+Set Timeout: 10 seconds (or even 30 seconds for testing).
+
+* **URL:**
+
+  ```
+  POST https://<api-id>.execute-api.<region>.amazonaws.com/prod/markReady
+  ```
+
+* **Body:**
+
+  ```json
+  {
+    "orderId": "<orderId-from-previous-step>"
+  }
+  ```
+
+* **Expected:**
+
+  * HTTP `200 OK` with response `"Marked as Ready"`
+  * `Orders` table updates `status = Ready`.
+  * SNS email sent to customer.
+  * SQS message sent to `DeliveryBoyQueue`.
+
+✅ Example `curl`:
+
+```bash
+curl -X POST \
+  -H "Content-Type: application/json" \
+  -d '{"orderId": "123e4567-e89b-12d3-a456-426614174000"}' \
+  https://<api-id>.execute-api.<region>.amazonaws.com/prod/markReady
+```
+
+---
+
+## Step 19: Test /deliveryUpdate Endpoint
+
+* **URL:**
+
+  ```
+  POST https://<api-id>.execute-api.<region>.amazonaws.com/prod/deliveryUpdate
+  ```
+
+* **Body:**
+
+  ```json
+  {
+    "orderId": "<orderId-from-previous-step>"
+  }
+  ```
+
+* **Expected:**
+
+  * HTTP `200 OK` with response `"Customer notified"`
+  * SNS sends:
+
+    * Email + SMS to customer (delivery boy has arrived).
+    * SMS feedback request.
+
+✅ Example `curl`:
+
+```bash
+curl -X POST \
+  -H "Content-Type: application/json" \
+  -d '{"orderId": "123e4567-e89b-12d3-a456-426614174000"}' \
+  https://<api-id>.execute-api.<region>.amazonaws.com/prod/deliveryUpdate
+```
+
+---
+
+# Summary
+
+✅ You have now **successfully implemented a canteen management system using multiple AWS services:**
+
+| Service     | Usage                                        |
+| ----------- | -------------------------------------------- |
+| DynamoDB    | Stores orders, users, delivery status data.  |
+| SQS         | Queue system for Owner & Delivery Boy tasks. |
+| SNS         | Sends Email & SMS notifications.             |
+| Lambda      | Contains business logic to process orders.   |
+| API Gateway | Provides HTTP API endpoints for frontend.    |
+
+---
+
+
+
+
+
+
+
 
 
 
