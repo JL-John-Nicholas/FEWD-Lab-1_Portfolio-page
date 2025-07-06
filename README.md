@@ -2358,6 +2358,792 @@ What is the gold rate?
 
 ---
 
+## Experiment 10
+Create a CloudFront Feedback Application, Where the user has to provide valuable feedback.
+1. Reactjs: User as to enter roll no(primary key), name, subjects(CC, FEWD, NN, IOT) & Rating; Finally push the project into S3 bucket with versioning enable
+2. Lambda: Run REST APIs on ExpressJS Server; Insert feedback with POST Method  
+3.  DynamoDB: Capture Feedback in DB
+4. Get DNS of Cloud front Domain serve feedback application.
+NOTE: Cloud front involves ReactJS+ Lambda + DynamoDB + S3 versioning
+
+Steps in detail:
+
+# Part 1: Set Up AWS Learner Lab
+
+### Step 1: Start Your Lab
+
+1. Go to **[Qwiklabs](https://learn.qwiklabs.com)** or **AWS Academy portal**
+2. Start the assigned lab → note down temporary AWS credentials.
+3. Open **AWS Console** using those credentials.
+
+---
+
+# Part 2: Build Frontend with React
+
+### Step 2: Create React Feedback App
+
+#### 2.1 Initialize App
+
+```bash
+npx create-react-app feedback
+cd feedback
+```
+
+#### 2.2 Modify App.js
+
+```jsx
+import React, { useState } from 'react';
+import axios from 'axios';
+import './App.css';
+
+function App() {
+  const [rollNo, setRollNo] = useState('');
+  const [name, setName] = useState('');
+  const [subject, setSubject] = useState('Math');
+  const [rating, setRating] = useState('5');
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const data = { rollNo, name, subject, rating };
+    try {
+      await axios.post('https://<API_GATEWAY_URL>/feedback', data);
+      alert('Feedback submitted!');
+    } catch (error) {
+      console.error(error);
+      alert('Submission failed.');
+    }
+  };
+
+  return (
+    <div className="App">
+      <h1>Feedback Form</h1>
+      <form onSubmit={handleSubmit}>
+        <input placeholder="Roll No" value={rollNo} onChange={(e) => setRollNo(e.target.value)} required /><br /><br />
+        <input placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} required /><br /><br />
+        <select value={subject} onChange={(e) => setSubject(e.target.value)}>
+          <option value="Math">Math</option>
+          <option value="Science">Science</option>
+          <option value="English">English</option>
+        </select><br /><br />
+        <select value={rating} onChange={(e) => setRating(e.target.value)}>
+          {[1, 2, 3, 4, 5].map(n => <option key={n} value={n}>{n}</option>)}
+        </select><br /><br />
+        <button type="submit">Submit</button>
+      </form>
+    </div>
+  );
+}
+export default App;
+```
+
+#### 2.3 Build the App
+
+```bash
+npm run build
+```
+
+---
+
+# Part 3: S3 for Hosting Static Website
+
+### Step 3: Create S3 Bucket & Enable Website Hosting
+
+#### 3.1 Create Bucket
+
+* Go to **S3 → Create bucket**
+* Name: `feedback-app-bucket-<unique_suffix>`
+* Uncheck: `Block all public access`
+* Create.
+
+#### 3.2 Enable Static Website Hosting
+
+* Go to **Properties → Static website hosting**
+* Enable
+* Set:
+
+  * Index document: `index.html`
+  * Error document: `index.html`
+
+#### 3.3 Upload Build Files
+
+* Go to **bucket → Upload → upload all files inside build/**
+
+#### 3.4 Set Bucket Policy for Public Access
+
+* Go to **Permissions → Bucket Policy**, paste:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "PublicReadGetObject",
+      "Effect": "Allow",
+      "Principal": "*",
+      "Action": "s3:GetObject",
+      "Resource": "arn:aws:s3:::feedback-app-bucket-<your_suffix>/*"
+    }
+  ]
+}
+```
+
+---
+
+# Part 4: Set Up CloudFront CDN
+
+### Step 4: Create CloudFront Distribution
+
+1. Go to **CloudFront → Create Distribution**
+2. Set:
+
+   * Origin domain: **S3 static website endpoint** (not bucket ARN!)
+   * Viewer Protocol Policy: **Redirect HTTP to HTTPS**
+   * Default root object: `index.html`
+3. Click **Create**
+4. Note the **CloudFront URL** (e.g., `https://dxxxxx.cloudfront.net`)
+
+---
+
+# Part 5: Set Up DynamoDB
+
+### Step 5: Create Table
+
+1. Go to **DynamoDB → Create table**
+2. Set:
+
+   * Table name: `FeedbackTable-<your_suffix>`
+   * Partition key: `id` (String)
+3. Leave rest default → Create.
+
+---
+
+# Part 6: Set Up Lambda
+
+### Step 6: Create Lambda Function
+
+#### 6.1 Lambda Code
+
+```python
+import json
+import boto3
+import uuid
+
+dynamodb = boto3.resource('dynamodb')
+table = dynamodb.Table('FeedbackTable-<your_suffix>')
+
+def lambda_handler(event, context):
+    body = json.loads(event['body'])
+    item = {
+        'id': str(uuid.uuid4()),
+        'rollNo': body['rollNo'],
+        'name': body['name'],
+        'subject': body['subject'],
+        'rating': body['rating']
+    }
+    table.put_item(Item=item)
+    return {
+        'statusCode': 200,
+        'headers': {'Access-Control-Allow-Origin': '*'},
+        'body': json.dumps({'message': 'Feedback received!'})
+    }
+```
+
+#### 6.2 Deploy Lambda
+
+* Go to **Lambda → Create function**
+* Name: `SubmitFeedbackFunction`
+* Runtime: `Python 3.9`
+* Use default role or create new with **basic Lambda permissions**.
+* Paste code above → Deploy.
+
+#### 6.3 Attach DynamoDB Policy
+
+* Go to **Configuration → Permissions → Execution role → Add permissions**
+* Attach `AmazonDynamoDBFullAccess`.
+
+---
+
+# Part 7: Set Up API Gateway
+
+### Step 7: Create API & Route
+
+#### 7.1 HTTP API
+
+* Go to **API Gateway → Create API → HTTP API**
+* Add integration: **Lambda (SubmitFeedbackFunction)**
+
+#### 7.2 Add Route & Enable CORS
+
+* Create route:
+
+  * Method: `POST`
+  * Resource path: `/feedback`
+* Go to **Routes → POST /feedback → Enable CORS**
+* Set:
+
+  * Allow headers: `Content-Type`
+  * Allow methods: `POST`
+  * Allow origin: `*` or your CloudFront URL.
+* Click **Add CORS configuration**
+
+#### 7.3 Deploy & Copy Endpoint
+
+* Note endpoint:
+  e.g. `https://abcde12345.execute-api.<region>.amazonaws.com/feedback`
+
+---
+
+# Part 8: Redeploy Frontend with API URL
+
+### Step 8: Update & Upload
+
+#### 8.1 Update App.js
+
+* Replace Axios URL with new API endpoint.
+
+#### 8.2 Rebuild & Upload
+
+```bash
+npm run build
+```
+
+* Go to **S3 → Upload new build/** files (overwrite).
+
+---
+
+# Part 9: Test Entire Flow
+
+### Step 9: Access App via CloudFront
+
+1. Open **CloudFront URL**.
+2. Submit feedback form.
+3. Check DynamoDB → Table → `Items` → verify entry.
+
+---
+
+✅ **Done:**
+🎉 You now have a **serverless app** with:
+
+* **React (S3 + CloudFront)**
+* **API Gateway + Lambda + DynamoDB**
+
+---
+
+## Experiment 11
+
+
+Steps in detail:
+
+# 🏗 Full Architecture Recap
+
+| Layer               | What it does                                |
+| ------------------- | ------------------------------------------- |
+| **S3 + CloudFront** | Hosts React app (static site)               |
+| **API Gateway**     | Exposes POST + GET endpoints                |
+| **Lambda**          | Handles write (Submit) + read (Fetch)       |
+| **IAM**             | Secures what each Lambda can do in DynamoDB |
+| **DynamoDB**        | Stores the feedback                         |
+
+---
+
+# 🚀 PART 1: IAM SETUP (in detail, with JSON policies)
+
+---
+
+## 1️⃣ Create IAM Groups
+
+### ➡ Faculty group
+
+* Go to **IAM → User groups → Create group**
+* Name: `Faculty`
+* **Attach policy:**
+
+```json
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": ["dynamodb:GetItem", "dynamodb:Scan"],
+            "Resource": "*"
+        }
+    ]
+}
+```
+
+You’ll do this by creating a new policy:
+
+* IAM → Policies → Create → JSON → paste above → Name: `FacultyReadPolicy`
+* Then go to Group → Attach policies → select `FacultyReadPolicy`.
+
+---
+
+### ➡ Student group
+
+* Go to **IAM → User groups → Create group**
+* Name: `Student`
+* **Attach policy:**
+
+```json
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": ["dynamodb:PutItem"],
+            "Resource": "*"
+        }
+    ]
+}
+```
+
+Same as above: create policy `StudentWritePolicy` and attach.
+
+---
+
+## 2️⃣ Create IAM Role for Lambda — `Rollno_IAM`
+
+* IAM → Roles → Create role →
+  **Trusted entity:** Lambda
+* **Permissions:** Attach `AWSLambdaBasicExecutionRole` (for logs).
+* Name: `Rollno_IAM`.
+
+---
+
+### ➡ Attach Inline Policies to enforce access
+
+Go to `Roles → Rollno_IAM → Add inline policy`.
+
+For `SubmitFeedbackFunction`:
+
+```json
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": ["dynamodb:PutItem"],
+            "Resource": "*"
+        }
+    ]
+}
+```
+
+And for `FetchFeedbackFunction`:
+
+```json
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": ["dynamodb:Scan", "dynamodb:GetItem"],
+            "Resource": "*"
+        }
+    ]
+}
+```
+
+(Tip: you could also split these into two roles if you want to be very strict.)
+
+---
+
+# ⚙ PART 2: Lambda Functions
+
+---
+
+## ✅ SubmitFeedbackFunction (students)
+
+**Python code:**
+
+```python
+import json
+import boto3
+import uuid
+
+dynamodb = boto3.resource('dynamodb')
+table = dynamodb.Table('FeedbackTable')
+
+def lambda_handler(event, context):
+    body = json.loads(event['body'])
+    item = {
+        'id': str(uuid.uuid4()),
+        'rollNo': body['rollNo'],
+        'name': body['name'],
+        'subject': body['subject'],
+        'rating': body['rating']
+    }
+    table.put_item(Item=item)
+    return {
+        'statusCode': 200,
+        'headers': { 'Access-Control-Allow-Origin': '*' },
+        'body': json.dumps({ 'message': 'Feedback submitted!' })
+    }
+```
+
+* Use IAM role `Rollno_IAM`.
+
+---
+
+## ✅ FetchFeedbackFunction (faculty)
+
+**Python code:**
+
+```python
+import json
+import boto3
+
+dynamodb = boto3.resource('dynamodb')
+table = dynamodb.Table('FeedbackTable')
+
+def lambda_handler(event, context):
+    response = table.scan()
+    items = response.get('Items', [])
+    return {
+        'statusCode': 200,
+        'headers': { 'Access-Control-Allow-Origin': '*' },
+        'body': json.dumps(items)
+    }
+```
+
+* Also use IAM role `Rollno_IAM`.
+
+---
+
+# 🌐 PART 3: API Gateway Setup
+
+---
+
+## ➡ Create HTTP API
+
+* API Gateway → Create HTTP API → Add integration → Lambda.
+* Setup routes:
+
+| Route       | Method | Lambda Function        |
+| ----------- | ------ | ---------------------- |
+| `/feedback` | POST   | SubmitFeedbackFunction |
+| `/feedback` | GET    | FetchFeedbackFunction  |
+
+---
+
+## ➡ Enable CORS
+
+* Go to Routes → `/feedback` → Enable CORS
+* Allow headers: `Content-Type`
+* Allow methods: `POST, GET`
+* Allow origins: `*`
+
+---
+
+# 🎯 PART 4: CloudFront + S3 React Frontend
+
+---
+
+## ➡ React app
+
+```bash
+npx create-react-app feedback-app
+cd feedback-app
+npm install axios
+```
+
+### Modify `App.js`:
+
+```jsx
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+
+function App() {
+  const [role, setRole] = useState('student');
+  const [rollNo, setRollNo] = useState('');
+  const [name, setName] = useState('');
+  const [subject, setSubject] = useState('Math');
+  const [rating, setRating] = useState('5');
+  const [feedbacks, setFeedbacks] = useState([]);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    await axios.post('https://<api-id>.execute-api.<region>.amazonaws.com/feedback', {
+      rollNo, name, subject, rating
+    });
+    alert('Feedback submitted!');
+  };
+
+  const fetchFeedback = async () => {
+    const res = await axios.get('https://<api-id>.execute-api.<region>.amazonaws.com/feedback');
+    setFeedbacks(res.data);
+  };
+
+  return (
+    <div style={{padding: 20}}>
+      <select value={role} onChange={(e) => setRole(e.target.value)}>
+        <option value="student">Student</option>
+        <option value="faculty">Faculty</option>
+      </select>
+
+      {role === 'student' && (
+        <form onSubmit={handleSubmit}>
+          <input placeholder="Roll No" value={rollNo} onChange={(e) => setRollNo(e.target.value)} required /><br/>
+          <input placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} required /><br/>
+          <select value={subject} onChange={(e) => setSubject(e.target.value)}>
+            <option>Math</option><option>Science</option><option>English</option>
+          </select><br/>
+          <select value={rating} onChange={(e) => setRating(e.target.value)}>
+            {[1,2,3,4,5].map(n => <option key={n}>{n}</option>)}
+          </select><br/>
+          <button type="submit">Submit</button>
+        </form>
+      )}
+
+      {role === 'faculty' && (
+        <div>
+          <button onClick={fetchFeedback}>Load Feedback</button>
+          <ul>
+            {feedbacks.map(fb => (
+              <li key={fb.id}>{fb.name} ({fb.rollNo}) - {fb.subject} - {fb.rating}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+export default App;
+```
+
+---
+
+## ➡ Build + Upload
+
+```bash
+npm run build
+```
+
+* Upload to S3 bucket (static hosting enabled).
+* Use CloudFront to point to S3 website endpoint.
+
+---
+
+# 🛠 PART 5: Testing
+
+---
+
+✅ Students can:
+
+* Select `Student`, fill form, submit → triggers POST → stores in DynamoDB.
+
+✅ Faculty can:
+
+* Select `Faculty`, click Load Feedback → triggers GET → fetches from DynamoDB.
+
+If a student **modifies JS to send GET**, the Lambda policy **forbids scan**, and API returns `403`.
+
+---
+
+# 🔍 DONE! ✅
+
+---
+
+Absolutely! Here’s a **very detailed, beginner-friendly step-by-step guide** on how to:
+
+✅ Upload your **React app** to an **S3 bucket with static website hosting**
+✅ Then create a **CloudFront distribution** that points to your S3 website endpoint, to serve the app via a CDN.
+
+---
+
+# 🚀 Part A: Upload to S3 (Static Website Hosting)
+
+---
+
+## 1️⃣ Create the S3 bucket
+
+1. Go to **AWS Console → S3 → Create bucket**
+2. Enter a unique bucket name, e.g.
+
+   ```
+   feedback-app-bucket-<your-name-or-id>
+   ```
+3. Select your region (important for cost + performance).
+4. Under **Block Public Access**,
+   🔥 **Uncheck** “Block all public access”
+5. Confirm you acknowledge that the bucket will be public.
+6. Click **Create bucket**.
+
+---
+
+## 2️⃣ Enable Static Website Hosting
+
+1. Go to your bucket → **Properties** tab.
+2. Scroll to **Static website hosting**.
+3. Click **Edit**.
+4. Choose:
+   ✅ **Enable**
+5. Enter:
+
+   ```
+   Index document: index.html
+   Error document: index.html
+   ```
+6. Click **Save changes**.
+
+---
+
+## 3️⃣ Upload your React build
+
+1. From your React project folder, run:
+
+   ```bash
+   npm run build
+   ```
+
+   This generates a `build/` folder.
+
+2. In AWS Console, go to your bucket → **Objects → Upload**.
+
+3. Click **Add files**, select everything **inside the build folder** (not the build folder itself), e.g.:
+
+   * `index.html`
+   * `static/`
+   * `manifest.json`
+     etc.
+
+4. Click **Upload**.
+
+---
+
+## 4️⃣ Set bucket policy for public read
+
+1. Go to **Permissions → Bucket policy**.
+2. Paste this JSON (replace with your bucket name):
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "PublicReadGetObject",
+      "Effect": "Allow",
+      "Principal": "*",
+      "Action": "s3:GetObject",
+      "Resource": "arn:aws:s3:::feedback-app-bucket-<your-name>/*"
+    }
+  ]
+}
+```
+
+3. Click **Save**.
+
+---
+
+## 5️⃣ Test the S3 website
+
+1. Go to **Properties → Static website hosting**.
+2. Copy the **Endpoint URL**, e.g.
+
+   ```
+   http://feedback-app-bucket-<your-name>.s3-website-us-east-1.amazonaws.com
+   ```
+3. Open it in your browser.
+   ✅ Your app should load!
+
+---
+
+# 🌎 Part B: Set up CloudFront pointing to S3 website endpoint
+
+(Important: **Use the S3 website endpoint, NOT the S3 bucket ARN.**)
+
+---
+
+## 6️⃣ Create a CloudFront distribution
+
+1. Go to **AWS Console → CloudFront → Distributions → Create distribution**.
+
+2. Under **Origin**:
+
+   * **Origin domain**:
+     Click inside the box.
+     It will auto-suggest your bucket *twice*:
+
+     * One ends with `.s3.amazonaws.com` (the REST API endpoint)
+     * One ends with `.s3-website-<region>.amazonaws.com` (the website endpoint).
+
+   ✅ Select the one ending with `.s3-website-<region>.amazonaws.com`.
+
+3. Leave default **Origin path** blank.
+
+4. Set:
+
+   * **Viewer Protocol Policy**:
+
+     ```
+     Redirect HTTP to HTTPS
+     ```
+
+5. Under **Default cache behavior**:
+
+   * **Cache policy**: CachingOptimized (default)
+
+6. Set:
+
+   * **Default root object**:
+
+     ```
+     index.html
+     ```
+
+7. Click **Create distribution**.
+
+---
+
+## 7️⃣ Wait for deployment
+
+* It takes **5-15 minutes** for CloudFront to deploy.
+* Once **Status → Enabled**, copy the **Domain name**, e.g.
+
+  ```
+  d1234abcd.cloudfront.net
+  ```
+
+---
+
+## 8️⃣ Test via CloudFront
+
+* Open `https://d1234abcd.cloudfront.net` in your browser.
+  ✅ Your React app is now served globally via CDN!
+
+---
+
+# 💡 (Optional) Configure caching & invalidation
+
+* Any time you upload new files to S3, you might have to **invalidate the cache** in CloudFront to force it to fetch new files.
+* Go to CloudFront → your distribution → **Invalidations → Create invalidation** → enter `/*`.
+
+---
+
+# 🧪 Final Testing checklist
+
+✅ **Direct S3 website URL**
+
+* Still loads your app.
+
+✅ **CloudFront URL**
+
+* Loads via CDN (faster).
+
+✅ Check network in browser dev tools → requests are served from CloudFront.
+
+---
+
+# 🚀 Summary (Quick steps)
+
+✅ S3 bucket → Static website hosting enabled → files uploaded → public read policy.
+✅ CloudFront → Origin set to S3 **website endpoint** → `index.html` root.
+✅ App loads from global CDN.
+
+---
+
+
+
 
 
 
