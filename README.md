@@ -2630,7 +2630,12 @@ npm run build
 ---
 
 ## Experiment 11
-
+Create a AWS IAM service with following steps:
+Create a new IAM role as Rollno_IAM
+Attach an administrator policy to that role
+Create two groups namely Faculty(Read+Write) & Student(Read)
+Provide permissions boundaries for users, groups, or roles
+Finally Integrate with CloudFront application, Where student can able to provide feedback only where as Faculty can fetch the feedback given by students
 
 Steps in detail:
 
