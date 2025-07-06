@@ -1600,21 +1600,6 @@ NOTE: Use SNS, SQS Service, the data to store in DynamoDB.
 
 Steps in detail:
 
-Absolutely. Here’s **Experiment 11** rewritten exactly like your previous experiments —
-step-by-step, clean, without emojis, following the same structured style you used for your EC2 / Docker / VPC notes.
-
----
-
-# Experiment 11
-
-**Implement a Canteen Management System using AWS SQS**
-
----
-
-## Part 1: Create DynamoDB Tables
-
----
-
 ### Step 1: Create Orders Table
 
 * Go to AWS Console → DynamoDB → Create Table
@@ -1985,10 +1970,6 @@ def lambda_handler(event, context):
 
 ---
 
-Absolutely. Here are your steps **in a detailed, step-by-step style**, like your earlier experiments.
-
----
-
 # Part 6: Setup API Gateway
 
 ---
@@ -2175,6 +2156,208 @@ curl -X POST \
 | API Gateway | Provides HTTP API endpoints for frontend.    |
 
 ---
+
+## Experiment 9
+Design a Amazon LEX chatbot with following criteria:
+You are need to build a Lex chatbot named GoldPriceBot_Rollno that can respond to user queries like: 
+Input:     “What is the current price of gold?”
+Output:  Todays Gold rate 24K is INR10,002/-
+Integrate Gold API(Metals-API or GoldAPI) by using web scraping Method.
+NOTE: Your chatbot must fetch real-time gold price data from a public API
+
+Steps in detail:
+
+## Part 1: Set up Lambda Layer
+
+### Step 1: Set Up the Python Layer in CloudShell
+
+1️⃣ Open AWS Console → Region: `eu-west-1 (Ireland)` (Lex works here).
+2️⃣ Click the **CloudShell** icon (top right).
+3️⃣ Run commands one by one:
+
+```bash
+mkdir my-layer
+cd my-layer
+mkdir python
+pip install requests -t python/
+pip install beautifulsoup4 -t python/
+cd ..
+cd my-layer
+zip -r ../my-layer.zip python/
+```
+
+✅ Your zip file will look like:
+
+```
+my-layer.zip
+└── python/
+    ├── requests/
+    └── bs4/
+```
+
+4️⃣ Download it to your system:
+
+* Click **Actions → Download file → my-layer.zip**
+
+---
+
+## Part 2: Create Lambda Layer
+
+### Step 2: Upload Layer
+
+1️⃣ Go to **AWS Console → Lambda → Layers → Create layer**
+2️⃣ Name: `requests-bs4-layer`
+3️⃣ Upload `my-layer.zip`
+4️⃣ Select **Compatible runtimes:** `Python 3.13`
+5️⃣ Click **Create**
+
+---
+
+## Part 3: Create Lambda Function
+
+### Step 3: Create Lambda Function
+
+1️⃣ Go to **Lambda → Functions → Create function**
+2️⃣ Select **Author from scratch**
+3️⃣ Name: `GetGoldRates`
+4️⃣ Runtime: `Python 3.13`
+5️⃣ Click **Create function**
+
+---
+
+### Step 4: Attach Layer to Lambda
+
+1️⃣ On function page → scroll to **Layers**
+2️⃣ Click **Add a layer → Custom layers**
+3️⃣ Choose `requests-bs4-layer`, Version: `1`
+4️⃣ Click **Add**
+
+---
+
+### Step 5: Configure Memory & Timeout
+
+1️⃣ Go to **Configuration tab → General configuration → Edit**
+2️⃣ Set **Memory:** `512 MB`
+3️⃣ Set **Timeout:** `45 sec`
+4️⃣ Click **Save**
+
+---
+
+## Part 4: Deploy Web Scraping Code
+
+### Step 6: Add Lambda Code
+
+1️⃣ Go to **Code tab → replace content** with:
+
+```python
+import requests
+from bs4 import BeautifulSoup
+
+def lambda_handler(event, context):
+    url = 'https://www.bankbazaar.com/gold-rate.html'
+    headers = {"User-Agent": "Mozilla/5.0"}
+
+    response = requests.get(url, headers=headers)
+    soup = BeautifulSoup(response.content, 'html.parser')
+
+    table = soup.find('table')
+    hyderabad_rate_24k = None
+
+    if table:
+        rows = table.find_all('tr')
+        for row in rows[1:]:
+            cols = row.find_all('td')
+            if len(cols) >= 3:
+                city = cols[0].get_text(strip=True).lower()
+                rate_24k = cols[2].get_text(strip=True).split('(')[0].strip()
+                if city == 'hyderabad':
+                    hyderabad_rate_24k = rate_24k
+                    break
+
+    if hyderabad_rate_24k:
+        message = f"The current 24K gold rate in Hyderabad is {hyderabad_rate_24k}."
+    else:
+        message = "Sorry, I couldn’t find the gold rate for Hyderabad."
+
+    return {
+        "sessionState": {
+            "dialogAction": {"type": "Close"},
+            "intent": {"name": "GetGoldRate", "state": "Fulfilled"}
+        },
+        "messages": [{
+            "contentType": "PlainText",
+            "content": message
+        }]
+    }
+```
+
+---
+
+### Step 7: Test Lambda
+
+1️⃣ Click **Test → Configure test event:**
+
+* Name: `goldtest`
+* JSON: `{}` (empty)
+  2️⃣ Click **Test → check output → should show gold rate message**
+
+---
+
+## Part 5: Create Lex Bot
+
+### Step 8: Create Lex Bot
+
+1️⃣ Go to **Amazon Lex → Create bot**
+2️⃣ Bot Name: `GoldRateBot`
+3️⃣ Runtime role: **Create new with basic Lex permissions**
+4️⃣ COPPA: **No**
+5️⃣ Language: `English (US)`
+6️⃣ Click **Next → Done**
+
+---
+
+### Step 9: Create Intent
+
+1️⃣ Go to **Intents tab → Add Intent → Add empty intent**
+2️⃣ Name: `GetGoldRate`
+3️⃣ Add sample utterances:
+
+```
+What is the gold rate?
+Tell me Hyderabad gold price
+Gold rate today
+What is the gold price in Hyderabad?
+```
+
+4️⃣ Scroll to **Fulfillment → enable Lambda function**
+5️⃣ Click **Save Intent**
+
+---
+
+### Step 10: Connect Lambda to Alias
+
+1️⃣ In Lex left panel → click **Aliases → TestBotAlias**
+2️⃣ Under **Languages → English → Lambda function** → select `GetGoldRates`
+3️⃣ Click **Save**
+
+---
+
+## Part 6: Build & Test
+
+### Step 11: Build and Test the Bot
+
+1️⃣ Go to **Intents page → click Build**
+2️⃣ After success, click **Test**
+3️⃣ Try phrases like:
+
+```
+What is the gold rate?
+```
+
+✅ It will call Lambda → scrape the gold price → respond via Lex.
+
+---
+
 
 
 
