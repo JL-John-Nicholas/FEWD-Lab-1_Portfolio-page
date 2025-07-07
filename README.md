@@ -1,3 +1,14 @@
+Console sign-in details
+
+Console sign-in URL
+https://443369304872.signin.aws.amazon.com/console
+
+User name
+admin
+
+Console password
+Hellobrother.07
+
 ## Experiment 1:
 Establish an AWS account. Use the AWS Management Console to launch an EC2 instance and connect to it from PUTTY.
 Note: Create Instance name as External_Rollno, PEM File as External_Rollno
