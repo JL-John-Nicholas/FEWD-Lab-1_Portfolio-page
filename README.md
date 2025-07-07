@@ -3147,6 +3147,644 @@ Absolutely! Here’s a **very detailed, beginner-friendly step-by-step guide** o
 
 ---
 
+## Experiment 12
+Create a DynamoDB database & Perform CRUD Operation with following data:
+DB_Name : RollNo_StudentDB
+Table_Fields: Student RollNo, Student name, Favourite subject, Subject Rating
+Insert a table contains field as student roll No, student name, Favourite subject, Subject Rating
+Insert random 15 values into the table
+Print alphabetical order by reference of student name
+Display the total count of whose rating is 5.
+Display what is the average rating of each subject
+Update student name
+Delete if any duplicates available
+
+Steps in detail:
+
+## 🔥 Part 1: Create the DynamoDB table
+
+### 1️⃣ Go to AWS Console
+
+* Log in to your [AWS Management Console](https://console.aws.amazon.com/)
+* Go to **Services → DynamoDB**
+
+---
+
+### 2️⃣ Create table
+
+* Click **“Create table”**
+
+#### Fill details:
+
+| Parameter     | Value                  |
+| ------------- | ---------------------- |
+| Table name    | `rollno_exp9`          |
+| Partition key | `student` (String)     |
+| Sort key      | (Optional) Leave blank |
+
+(You can use only `student` as primary key. Or, if you want to make `rollno` the unique identifier, use it instead.)
+
+* Keep default settings for capacity & encryption. Click **Create Table**.
+
+---
+
+### 3️⃣ Table is ready!
+
+* Wait for status to turn to **“Active”**.
+
+---
+
+**full, clean Python program** that does ALL your experiment tasks together:
+
+* Creates 15 records
+* Prints all sorted by `student_name`
+* Counts students with rating = 5
+* Shows average rating per `fav_sub`
+* Updates `student_name` for one student
+* Deletes duplicate records if found
+
+And after that, I’ll give **step-by-step guide to TEST it** on your machine.
+
+---
+
+# 🚀 Full Python program (using boto3)
+
+```python
+import boto3
+from collections import defaultdict
+
+# Initialize DynamoDB resource
+dynamodb = boto3.resource('dynamodb')
+table_name = 'rollno_exp9'
+table = dynamodb.Table(table_name)
+
+# Insert 15 records
+def insert_records():
+    items = [
+        {"student": "S001", "rollno": "R01", "student_name": "Alice", "fav_sub": "Math", "rating": 4},
+        {"student": "S002", "rollno": "R02", "student_name": "Bob", "fav_sub": "Physics", "rating": 5},
+        {"student": "S003", "rollno": "R03", "student_name": "Charlie", "fav_sub": "Chemistry", "rating": 3},
+        {"student": "S004", "rollno": "R04", "student_name": "David", "fav_sub": "Math", "rating": 5},
+        {"student": "S005", "rollno": "R05", "student_name": "Eve", "fav_sub": "Biology", "rating": 4},
+        {"student": "S006", "rollno": "R06", "student_name": "Frank", "fav_sub": "Math", "rating": 2},
+        {"student": "S007", "rollno": "R07", "student_name": "Grace", "fav_sub": "Physics", "rating": 5},
+        {"student": "S008", "rollno": "R08", "student_name": "Hank", "fav_sub": "Math", "rating": 3},
+        {"student": "S009", "rollno": "R09", "student_name": "Ivy", "fav_sub": "Chemistry", "rating": 4},
+        {"student": "S010", "rollno": "R10", "student_name": "Jack", "fav_sub": "Physics", "rating": 5},
+        {"student": "S011", "rollno": "R11", "student_name": "Kara", "fav_sub": "Biology", "rating": 2},
+        {"student": "S012", "rollno": "R12", "student_name": "Leo", "fav_sub": "Math", "rating": 4},
+        {"student": "S013", "rollno": "R13", "student_name": "Mona", "fav_sub": "Physics", "rating": 5},
+        {"student": "S014", "rollno": "R14", "student_name": "Nate", "fav_sub": "Biology", "rating": 3},
+        {"student": "S015", "rollno": "R15", "student_name": "Olivia", "fav_sub": "Chemistry", "rating": 4}
+    ]
+    for item in items:
+        table.put_item(Item=item)
+    print("✅ Inserted 15 records.")
+
+# Retrieve all records and sort by student_name
+def retrieve_and_sort():
+    response = table.scan()
+    items = response['Items']
+    items.sort(key=lambda x: x['student_name'])
+    print("\n✅ All records sorted by student_name:")
+    for item in items:
+        print(item)
+    return items
+
+# Count students with rating 5
+def count_rating_5(items):
+    count = sum(1 for item in items if item['rating'] == 5)
+    print(f"\n✅ Count of students with rating 5: {count}")
+
+# Calculate average rating per fav_sub
+def average_rating(items):
+    subject_ratings = defaultdict(list)
+    for item in items:
+        subject_ratings[item['fav_sub']].append(item['rating'])
+    print("\n✅ Average rating per fav_sub:")
+    for sub, ratings in subject_ratings.items():
+        avg = sum(ratings) / len(ratings)
+        print(f"{sub}: {avg:.2f}")
+
+# Update student_name for specific student
+def update_student_name(student_id, new_name):
+    table.update_item(
+        Key={'student': student_id},
+        UpdateExpression='SET student_name = :name',
+        ExpressionAttributeValues={':name': new_name}
+    )
+    print(f"\n✅ Updated student_name for {student_id} to {new_name}")
+
+# Delete duplicate records
+def delete_duplicates(items):
+    seen = set()
+    for item in items:
+        key = (item['student_name'], item['rollno'])
+        if key in seen:
+            table.delete_item(Key={'student': item['student']})
+            print(f"🚫 Deleted duplicate: {item}")
+        else:
+            seen.add(key)
+    print("\n✅ Duplicate records cleaned up if any.")
+
+# Main runner
+if __name__ == "__main__":
+    insert_records()
+    items = retrieve_and_sort()
+    count_rating_5(items)
+    average_rating(items)
+    update_student_name("S005", "Evelyn")
+    delete_duplicates(items)
+```
+
+---
+
+# 🚀 How to run this in AWS CloudShell
+
+### ✅ 1️⃣ Open AWS CloudShell
+
+* In your AWS Console, click the **CloudShell icon** (usually in the top bar).
+* It opens a terminal inside AWS, with access to all your AWS resources.
+
+---
+
+### ✅ 2️⃣ Create your Python script
+
+Run:
+
+```bash
+nano dynamodb_exp12.py
+```
+
+Paste your full program there.
+(You can right-click → Paste or use `Shift+Insert` in the terminal.)
+
+* Save and exit by pressing:
+
+```
+Ctrl + O (write out)
+Enter
+Ctrl + X (exit)
+```
+
+---
+
+### ✅ 3️⃣ Check Python + boto3 is available
+
+Run:
+
+```bash
+python3 --version
+pip3 show boto3
+```
+
+You should see something like `Python 3.9.16` and `boto3`.
+
+---
+
+### ✅ 4️⃣ Run your script
+
+Run:
+
+```bash
+python3 dynamodb_exp12.py
+```
+
+It will execute and show all the print outputs of:
+
+* inserting records
+* retrieving and sorting
+* counting ratings
+* average ratings
+* updating
+* cleaning duplicates.
+
+---
+
+### ✅ 5️⃣ Verify in Console
+
+After running, go back to your **DynamoDB Console**, open your `rollno_exp9` table, and click **Items** to see all records updated.
+
+---
+
+## Experiment 13
+Create a DynamoDB database & Perform CRUD Operation with following data:
+DB_Name : RollNo_EmployeeDB
+Table_Fields: Employee_No, Employee_Name, Employee_Dept, Employee_sal
+Insert a table with above Fields & Partition key as: Employee_No
+Insert random 10 values into the table & each employee salary should be range from 10K-50K
+Print alphabetical order by reference of Employee_Name
+Display the total Salary of Employee’s.
+Update  salary whose salary is 10000/- to 10500/-
+Delete If an employee leaves the organization.
+
+Steps in detail:
+
+✅ Absolutely!
+I’ll give you **three things**:
+
+1. **Clear DynamoDB setup steps** (table creation)
+2. **Full Python program** (same clean style, modular functions)
+3. **Easy step-by-step testing guide**
+
+---
+
+# 🚀 1️⃣ DynamoDB Setup: Create the table
+
+## 🔥 Create table `RollNo_EmployeeDB`
+
+### 📝 Steps in AWS Console
+
+1. Go to **AWS Management Console → DynamoDB → Tables → Create table**
+
+2. Enter:
+   \| Field               | Value               |
+   \|---------------------|---------------------|
+   \| Table name          | `RollNo_EmployeeDB` |
+   \| Partition key       | `Employee_No` (String) |
+
+3. Keep default settings (pay-per-request, no sort key).
+
+4. Click **Create Table**.
+
+Wait till it shows **Active**.
+
+---
+
+### 💻 Or via CloudShell (CLI)
+
+If you want, run this command in AWS CloudShell:
+
+```bash
+aws dynamodb create-table \
+    --table-name RollNo_EmployeeDB \
+    --attribute-definitions AttributeName=Employee_No,AttributeType=S \
+    --key-schema AttributeName=Employee_No,KeyType=HASH \
+    --billing-mode PAY_PER_REQUEST
+```
+
+Check it exists:
+
+```bash
+aws dynamodb list-tables
+```
+
+---
+
+# 🚀 2️⃣ Python program to perform CRUD
+
+This script does:
+✅ Insert 10 employees with random salaries
+✅ Print all sorted by `Employee_Name`
+✅ Show total salary of all employees
+✅ Update salaries from `10000` → `10500`
+✅ Delete one employee (simulate leaving org)
+
+---
+
+### ✅ Full clean Python code
+
+```python
+import boto3
+import random
+
+dynamodb = boto3.resource('dynamodb')
+table = dynamodb.Table('RollNo_EmployeeDB')
+
+# Insert 10 employees
+def insert_employees():
+    names = ["Alice", "Bob", "Charlie", "David", "Eve",
+             "Frank", "Grace", "Hank", "Ivy", "Jack"]
+    depts = ["HR", "IT", "Sales", "Finance", "Admin"]
+
+    for i in range(1, 11):
+        item = {
+            "Employee_No": f"E{i:03}",
+            "Employee_Name": names[i-1],
+            "Employee_Dept": random.choice(depts),
+            "Employee_sal": random.randint(10000, 50000)
+        }
+        table.put_item(Item=item)
+    print("✅ Inserted 10 employee records.")
+
+# Retrieve & print employees sorted by Employee_Name
+def print_sorted_employees():
+    response = table.scan()
+    items = response['Items']
+    items.sort(key=lambda x: x['Employee_Name'])
+    print("\n✅ Employees sorted by Employee_Name:")
+    for item in items:
+        print(f"{item['Employee_No']} | {item['Employee_Name']} | {item['Employee_Dept']} | Salary: {item['Employee_sal']}")
+    return items
+
+# Display total salary
+def total_salary(items):
+    total = sum(int(item['Employee_sal']) for item in items)
+    print(f"\n✅ Total Salary of all Employees: {total}")
+
+# Update salary from 10000 to 10500
+def update_salary():
+    response = table.scan()
+    for item in response['Items']:
+        if int(item['Employee_sal']) == 10000:
+            table.update_item(
+                Key={'Employee_No': item['Employee_No']},
+                UpdateExpression='SET Employee_sal = :new',
+                ExpressionAttributeValues={':new': 10500}
+            )
+            print(f"🚀 Updated salary of {item['Employee_No']} ({item['Employee_Name']}) to 10500")
+
+# Delete employee record (simulate leaving)
+def delete_employee(employee_no):
+    table.delete_item(Key={'Employee_No': employee_no})
+    print(f"\n🚫 Deleted Employee record: {employee_no}")
+
+# Main execution
+if __name__ == "__main__":
+    insert_employees()
+    items = print_sorted_employees()
+    total_salary(items)
+    update_salary()
+    delete_employee('E010')  # deleting last employee for example
+```
+
+---
+
+# 🚀 3️⃣ Testing this program in CloudShell
+
+✅ **1. Open CloudShell**
+
+✅ **2. Create script**
+
+```bash
+nano employee_crud.py
+```
+
+Paste code, then:
+
+* `Ctrl + O` + `Enter` (save)
+* `Ctrl + X` (exit).
+
+---
+
+✅ **3. Run it**
+
+```bash
+python3 employee_crud.py
+```
+
+Output will show:
+
+* Inserted employees
+* Sorted list by `Employee_Name`
+* Total salary
+* Updated salaries
+* Deleted one employee
+
+---
+
+✅ **4. Verify in DynamoDB Console**
+
+* Go to **DynamoDB → Tables → RollNo\_EmployeeDB → Items** to see all current employees and changes.
+
+---
+
+# ✅ Summary of your experiment tasks
+
+```
+1️⃣ Created DynamoDB table: RollNo_EmployeeDB
+   - Fields: Employee_No (PK), Employee_Name, Employee_Dept, Employee_sal
+
+2️⃣ Inserted 10 employees with salaries 10K-50K.
+
+3️⃣ Retrieved and printed all employees sorted by Employee_Name.
+
+4️⃣ Displayed total salary of all employees.
+
+5️⃣ Updated salaries from 10000 to 10500.
+
+6️⃣ Deleted record of an employee who left.
+```
+
+---
+
+## Experiment 14
+Design a Amazon LEX chatbot with following criteria:
+You are need to build a Lex chatbot named Weather_Rollno that can respond to user queries like: 
+Input:     “What is the current Weather in my location?”
+Output:  Today's Weather is 32 degree Celsius in Hyderabad
+Integrate Weather API(Weatherapi.com) by using web scraping Method.
+NOTE: Your chatbot must fetch real-time data from your Current Location from a public API
+
+Steps in detail:
+
+## Part 1: Create Lambda Function
+
+### Step 1: Create Lambda Function
+
+1. Go to **AWS Console → Lambda → Functions → Create function**
+2. Choose:
+
+* Author from scratch
+* Function name: `GetWeatherInfo`
+* Runtime: `Python 3.9` (or 3.10 / 3.13 — as available)
+* Role: **Create new role with basic Lambda permissions**
+
+3. Click **Create function**
+
+---
+
+### Step 2: Configure Memory & Timeout
+
+1. In the **Configuration tab → General configuration → Edit**
+2. Set:
+
+* Memory: `512 MB`
+* Timeout: `45 sec`
+
+3. Click **Save**
+
+---
+
+### Step 3: Add Lambda Code
+
+1. Go to the **Code tab**.
+2. **Replace existing content** with this code:
+
+```python
+import urllib.request
+import json
+
+def lambda_handler(event, context):
+    city = "Hyderabad"  # Or extract from event["sessionState"]["intent"]["slots"]["City"]["value"]["interpretedValue"]
+    api_key = '61a1d8419f9d307924240958d89e284d'
+    base_url = f"http://api.openweathermap.org/data/2.5/weather?q={city}&appid={api_key}&units=metric"
+
+    try:
+        with urllib.request.urlopen(base_url) as response:
+            data = json.loads(response.read())
+
+        weather = data['weather'][0]['description'].capitalize()
+        temp = data['main']['temp']
+        feels_like = data['main']['feels_like']
+        humidity = data['main']['humidity']
+
+        message = (
+            f"Weather report for {city}:\n"
+            f"Condition: {weather}\n"
+            f"Temperature: {temp}°C (feels like {feels_like}°C)\n"
+            f"Humidity: {humidity}%"
+        )
+    except Exception as e:
+        message = "Sorry, I couldn't fetch the weather report at the moment."
+
+    return {
+        "sessionState": {
+            "dialogAction": { "type": "Close" },
+            "intent": {
+                "name": "getWeatherInfo",
+                "state": "Fulfilled"
+            }
+        },
+        "messages": [
+            {
+                "contentType": "PlainText",
+                "content": message
+            }
+        ]
+    }
+```
+
+3. Click **Deploy**
+
+---
+
+### Step 4: Test Lambda Function
+
+1. Click **Test → Configure test event**:
+
+* Name: `weathertest`
+* Event JSON: `{}` (empty)
+
+2. Click **Save → Test**
+3. You should see output like:
+
+```
+"Weather report for Hyderabad:
+Condition: Clear sky
+Temperature: 32°C (feels like 33°C)
+Humidity: 55%"
+```
+
+This confirms your Lambda is working.
+
+---
+
+## Part 2: Create Lex Bot
+
+### Step 5: Create Lex Bot
+
+1. Go to **Amazon Lex V2 → Bots → Create bot**
+2. Enter details:
+
+* Bot Name: `Weather_Rollno`
+* Runtime role: **Create a role with basic Amazon Lex permissions**
+* COPPA: `No`
+* Language: `English (US)`
+
+3. Click **Next → Done**
+
+---
+
+### Step 6: Create Intent
+
+1. Go to **Intents → Add intent → Add empty intent**
+2. Name it: `getWeatherInfo`
+3. Add sample utterances:
+
+```
+What is the weather today?
+Tell me today's weather
+What is the current weather in my location?
+What's the temperature outside?
+```
+
+4. Scroll to **Fulfillment → Lambda function invocation → Enable**
+5. Select your Lambda `GetWeatherInfo`
+6. Click **Save Intent**
+
+---
+
+### Step 7: Connect Lambda to Lex Alias
+
+1. In the left menu, click **Aliases → TestBotAlias**
+2. Under **Languages → English**, select your Lambda function `GetWeatherInfo`
+3. Click **Save**
+
+---
+
+## Part 3: Build & Test Chatbot
+
+### Step 8: Build the Bot
+
+1. Go to **Intents page**
+2. Click **Build**
+3. Wait for it to complete.
+
+---
+
+### Step 9: Test the Bot
+
+1. Click **Test** on the top right.
+2. Try queries like:
+
+```
+What is the weather today?
+Tell me today's weather
+```
+
+It should respond with:
+
+```
+Weather report for Hyderabad:
+Condition: Clear sky
+Temperature: 32°C (feels like 33°C)
+Humidity: 55%
+```
+
+---
+
+## Summary: What did we build?
+
+This project created a complete serverless conversational system on AWS:
+
+* You have a **Lex chatbot `Weather_Rollno`** that understands natural language questions about weather.
+* It triggers a **Lambda function** that uses Python to call **OpenWeatherMap’s API** with `urllib`.
+* The Lambda parses and formats the live weather data, sending it back to Lex.
+* Lex then responds directly to the user, providing the current weather for Hyderabad (or any city if extended).
+
+---
+
+You can write similar code for **fetching gold rates** **without using a Lambda layer**, as long as you avoid external libraries like `requests` or `bs4` which are **not included by default** in the Lambda runtime.
+
+If you write it with **standard Python libraries like `urllib` and `re`**, then you don't need any Lambda Layer.
+
+---
+
+### ✅ Sample approach for gold rate without Lambda Layer
+
+You can rewrite your gold rate scraper using:
+
+* `urllib.request` for HTTP requests (just like your weather example)
+* `re` (regular expressions) or basic string parsing to extract data from HTML.
+
+This means **no bs4 (BeautifulSoup), no requests**, so **no layer needed**.
+
+---
+
+
+
+
 
 
 
